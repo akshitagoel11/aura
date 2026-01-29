@@ -1,0 +1,25 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "akshiita2006@gmail.com",
+      "fullName": "Akshu",
+      "passwordHash": "QWtzaHVAMjcwMXNhbHQ=",
+      "createdAt": "2026-01-29T14:09:42.931Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "session_1_1769695792299",
+      "userId": 1,
+      "createdAt": "2026-01-29T14:09:52.299Z"
+    },
+    {
+      "id": "session_2_1769696695789",
+      "userId": 1,
+      "createdAt": "2026-01-29T14:24:55.789Z"
+    }
+  ],
+  "nextUserId": 2,
+  "nextSessionId": 3
+}
