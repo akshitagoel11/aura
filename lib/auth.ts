@@ -113,7 +113,7 @@ export async function createSession(userId: number): Promise<string> {
 
   await query(
     'INSERT INTO sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
-    [userId, token, expiresAt]
+    [userId, token, expiresAt.toISOString()]
   );
 
   return token;

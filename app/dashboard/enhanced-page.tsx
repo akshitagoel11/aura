@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import Sidebar from '@/components/sidebar';
 import DashboardHeader from '@/components/dashboard-header';
 import IntentPreview from '@/components/intent-preview';
-import { ActivityTimeline } from '@/components/activity-timeline';
+import { EnhancedActivityTimeline } from '@/components/enhanced-activity-timeline';
+import WeeklyReflection from '@/components/weekly-reflection';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -21,7 +22,8 @@ import {
   Lightbulb,
   Zap,
   Pause,
-  Play
+  Play,
+  TrendingUp
 } from 'lucide-react';
 
 type IntentType = 'email' | 'task' | 'reminder' | 'chat';
@@ -34,16 +36,47 @@ interface ExplainabilityData {
   estimatedTime: string;
 }
 
+interface CognitiveLoadData {
+  level: 'low' | 'medium' | 'high' | 'overloaded';
+  taskCount: number;
+  warning?: string;
+}
+
 export default function EnhancedDashboardPage() {
   const [intent, setIntent] = useState('');
   const [intentType, setIntentType] = useState<IntentType>('email');
-  const [preview, setPreview] = useState<string | null>(null);
-  const [explainability, setExplainability] = useState<ExplainabilityData | null>(null);
+  const [preview, setPreview] = useState<any>(null);
+  const [explainability, setExplainability] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'input' | 'preview' | 'confirming'>('input');
+  const [step, setStep] = useState<'input' | 'preview' | 'executed'>('input');
   const [isAIPaused, setIsAIPaused] = useState(false);
-  const [cognitiveLoad, setCognitiveLoad] = useState<'low' | 'medium' | 'high'>('low');
+  const [cognitiveLoad, setCognitiveLoad] = useState<'low' | 'medium' | 'high' | 'overloaded'>('low');
   const [showExplainability, setShowExplainability] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Fetch cognitive load on component mount and after actions
+  useEffect(() => {
+    fetchCognitiveLoad();
+  }, [refreshKey]);
+
+  async function fetchCognitiveLoad() {
+    try {
+      const response = await fetch('/api/cognitive-load');
+      if (response.ok) {
+        const data = await response.json();
+        setCognitiveLoad({
+          level: data.loadLevel,
+          taskCount: data.taskCount,
+          warning: data.loadLevel === 'overloaded' ? 'Today looks overloaded - consider rescheduling some tasks' : 
+                   data.loadLevel === 'high' ? 'High cognitive load detected' : undefined
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch cognitive load:', error);
+    }
+  }
 
   async function generatePreview() {
     if (!intent.trim()) return;
@@ -60,24 +93,19 @@ export default function EnhancedDashboardPage() {
 
       const data = await response.json();
       setPreview(data.preview);
+      setCurrentDraftId(data.draftId || null);
       
-      // Mock explainability data (in real app, this would come from AI)
+      // Set explainability data from API response
       setExplainability({
-        confidence: Math.random() * 0.3 + 0.7, // 0.7-1.0
-        reasoning: `AI identified this as a ${intentType} request based on keywords and context patterns. The system analyzed the semantic structure and matched it against known templates.`,
-        alternatives: [
+        confidence: data.confidence || 0.85,
+        reasoning: data.reasoning || `AI identified this as a ${intentType} request based on keywords and context patterns.`,
+        alternatives: data.alternatives || [
           `Create a ${intentType} draft instead`,
           `Schedule this for later review`,
           `Break down into smaller tasks`
         ],
-        risks: intentType === 'email' ? [
-          'Recipient email validation needed',
-          'Check for sensitive information'
-        ] : [
-          'Verify deadline accuracy',
-          'Check for conflicting tasks'
-        ],
-        estimatedTime: '< 1 minute'
+        risks: data.risks || [],
+        estimatedTime: data.estimatedTime || '< 1 minute'
       });
       
       setStep('preview');
@@ -88,22 +116,74 @@ export default function EnhancedDashboardPage() {
     }
   }
 
+  async function regeneratePreview() {
+    if (!intent.trim() || !currentDraftId) return;
+
+    setRegenerating(true);
+    try {
+      const response = await fetch('/api/ai/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          intent, 
+          intentType, 
+          regenerate: true, 
+          previousDraft: JSON.stringify(preview) 
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to regenerate preview');
+
+      const data = await response.json();
+      setPreview(data.preview);
+      setCurrentDraftId(data.draftId || null);
+      
+      // Update explainability data
+      setExplainability({
+        confidence: data.confidence || 0.85,
+        reasoning: data.reasoning || `AI regenerated this ${intentType} with different approach`,
+        alternatives: data.alternatives || [
+          'Try another regeneration',
+          'Modify specific parts',
+          'Start over with new input'
+        ],
+        risks: data.risks || [],
+        estimatedTime: data.estimatedTime || '< 1 minute'
+      });
+    } catch (error) {
+      console.error('Regeneration error:', error);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   async function executeIntent() {
     setLoading(true);
     setStep('confirming');
 
     try {
+      console.log('[Frontend] Executing intent with data:', { intent, intentType, preview });
+      
       const response = await fetch('/api/ai/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intent, intentType, preview }),
       });
 
-      if (!response.ok) throw new Error('Failed to execute intent');
+      console.log('[Frontend] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Frontend] Error response:', errorText);
+        throw new Error(`Failed to execute intent: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('[Frontend] Execution success:', data);
 
       // Update cognitive load after execution
-      const newLoad = Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low';
-      setCognitiveLoad(newLoad);
+      await fetchCognitiveLoad();
+      setRefreshKey(prev => prev + 1);
 
       setIntent('');
       setPreview(null);
@@ -129,13 +209,22 @@ export default function EnhancedDashboardPage() {
     return AlertTriangle;
   };
 
+  const getCognitiveLoadColor = (level: string) => {
+    switch (level) {
+      case 'overloaded': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      default: return 'bg-green-500';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <Sidebar 
         isAIPaused={isAIPaused}
         onToggleAI={() => setIsAIPaused(!isAIPaused)}
-        cognitiveLoad={cognitiveLoad}
+        cognitiveLoad={cognitiveLoad.level}
       />
 
       {/* Main Content */}
@@ -144,6 +233,27 @@ export default function EnhancedDashboardPage() {
 
         <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">
           <div className="grid gap-8">
+            {/* Cognitive Load Indicator */}
+            {cognitiveLoad.warning && (
+              <Card className="border-orange-500/20 bg-orange-500/5">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${getCognitiveLoadColor(cognitiveLoad.level)}`} />
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm font-medium text-orange-400">
+                        Cognitive Load: {cognitiveLoad.level.toUpperCase()}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        ({cognitiveLoad.taskCount} tasks today)
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-orange-300 mt-2">{cognitiveLoad.warning}</p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* AI Task Input Section */}
             <Card className="border-border bg-card">
               <CardHeader>
@@ -298,8 +408,11 @@ export default function EnhancedDashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Activity Timeline */}
-            <ActivityTimeline />
+            {/* Enhanced Activity Timeline */}
+            <EnhancedActivityTimeline refreshKey={refreshKey} />
+
+            {/* Weekly Reflection */}
+            <WeeklyReflection />
           </div>
         </main>
       </div>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, getUserByEmail } from '@/lib/auth-db';
+import { userService } from '@/lib/services-sqlite';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,26 +29,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    console.log('[API] Checking for existing user');
-    const existingUser = await getUserByEmail(email);
-    if (existingUser) {
-      console.log('[API] User already exists:', email);
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Create user
+    // Create user with secure password hashing
     console.log('[API] Creating new user');
-    const user = await createUser(email, password, fullName);
+    const user = await userService.createUser(email, password, fullName);
     
     if (!user) {
-      console.log('[API] User creation failed');
+      console.log('[API] User creation failed - email might already exist');
       return NextResponse.json(
-        { error: 'Failed to create user' },
-        { status: 500 }
+        { error: 'Looks like you already have an account! Please login instead.', code: 'USER_EXISTS' },
+        { status: 409 }
       );
     }
 

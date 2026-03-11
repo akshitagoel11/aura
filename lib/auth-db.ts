@@ -152,13 +152,19 @@ export async function logActivity(
   details?: Record<string, any>,
   intentExecutionId?: number
 ): Promise<void> {
-  // Import the addActivity function from the activity API
-  const { addActivity } = await import('../app/api/activity/route');
+  // Import the aiActionService to log activities
+  const { aiActionService } = await import('./services-sqlite');
   
   const status = action === 'executed_intent' && details?.success ? 'executed' : 
                 action === 'executed_intent' && !details?.success ? 'failed' : 'pending';
   
-  addActivity(userId, action, details, status, details?.intentType);
+  await aiActionService.logAIAction(userId, {
+    intentText: action,
+    intentType: details?.intentType || 'activity',
+    previewData: details,
+    status: status as any,
+    reasoning: `Activity logged: ${action}`
+  });
   
   console.log(`[Activity] User ${userId}: ${action}`, details);
 }

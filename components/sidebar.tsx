@@ -22,7 +22,7 @@ import {
 interface SidebarProps {
   isAIPaused?: boolean;
   onToggleAI?: () => void;
-  cognitiveLoad?: 'low' | 'medium' | 'high';
+  cognitiveLoad?: 'low' | 'medium' | 'high' | 'overloaded';
 }
 
 export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad = 'low' }: SidebarProps) {
@@ -69,8 +69,10 @@ export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad 
 
   const getCognitiveLoadColor = () => {
     switch (cognitiveLoad) {
-      case 'high':
+      case 'overloaded':
         return 'bg-red-500';
+      case 'high':
+        return 'bg-orange-500';
       case 'medium':
         return 'bg-yellow-500';
       default:
@@ -80,12 +82,14 @@ export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad 
 
   const getCognitiveLoadText = () => {
     switch (cognitiveLoad) {
+      case 'overloaded':
+        return 'Overloaded';
       case 'high':
-        return 'High Load';
+        return 'High';
       case 'medium':
-        return 'Medium Load';
+        return 'Medium';
       default:
-        return 'Low Load';
+        return 'Low';
     }
   };
 
@@ -94,7 +98,7 @@ export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad 
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
             <Brain className="w-4 h-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
@@ -120,7 +124,7 @@ export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              <Icon className="w-4 h-4 shrink-0" />
               {!isCollapsed && (
                 <>
                   <span className="flex-1">{item.name}</span>
@@ -183,7 +187,7 @@ export default function Sidebar({ isAIPaused = false, onToggleAI, cognitiveLoad 
             href="/dashboard/help"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <HelpCircle className="w-4 h-4" />
+            <HelpCircle className="w-4 h-4 shrink-0" />
             <span>Help & Support</span>
           </Link>
         )}

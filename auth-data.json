@@ -6,6 +6,20 @@
       "fullName": "Akshu",
       "passwordHash": "QWtzaHVAMjcwMXNhbHQ=",
       "createdAt": "2026-01-29T14:09:42.931Z"
+    },
+    {
+      "id": 2,
+      "email": "deepakkarhana01@gmail.com",
+      "fullName": "deepak",
+      "passwordHash": "MTIzNDU2NzhzYWx0",
+      "createdAt": "2026-01-30T04:23:12.895Z"
+    },
+    {
+      "id": 3,
+      "email": "akshitagoel059@gmail.com",
+      "fullName": "Akshu",
+      "passwordHash": "MTIzNDU2NzhzYWx0",
+      "createdAt": "2026-01-31T08:06:57.367Z"
     }
   ],
   "sessions": [
@@ -18,8 +32,18 @@
       "id": "session_2_1769696695789",
       "userId": 1,
       "createdAt": "2026-01-29T14:24:55.789Z"
+    },
+    {
+      "id": "session_3_1769746997496",
+      "userId": 2,
+      "createdAt": "2026-01-30T04:23:17.496Z"
+    },
+    {
+      "id": "session_4_1769846834278",
+      "userId": 3,
+      "createdAt": "2026-01-31T08:07:14.278Z"
     }
   ],
-  "nextUserId": 2,
-  "nextSessionId": 3
+  "nextUserId": 4,
+  "nextSessionId": 5
 }

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -66,7 +68,15 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         setError(data.error || 'Registration failed');
+        setErrorCode(data.code || '');
         console.log('[Client] Registration failed:', data.error);
+        
+        // If user already exists, show a helpful message and redirect option
+        if (data.code === 'USER_EXISTS') {
+          setTimeout(() => {
+            router.push('/login');
+          }, 3000);
+        }
         return;
       }
 
@@ -81,7 +91,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 to-slate-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Welcome to Aura</CardTitle>
@@ -134,7 +144,31 @@ export default function RegisterPage() {
               />
             </div>
 
-            {error && <div className="text-sm text-red-500 bg-red-50 p-3 rounded">{error}</div>}
+            {error && (
+              <div className={`text-sm p-3 rounded-md flex items-start gap-2 ${
+                errorCode === 'USER_EXISTS' ? 'bg-orange-50 text-orange-700 border border-orange-200' : 
+                'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {errorCode === 'USER_EXISTS' ? (
+                  <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{error}</p>
+                  {errorCode === 'USER_EXISTS' && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm text-orange-600">
+                        Redirecting you to login page in 3 seconds...
+                      </p>
+                      <Link href="/login" className="text-orange-700 hover:underline font-medium">
+                        Go to login now
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Create account'}

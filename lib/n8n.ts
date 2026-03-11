@@ -35,12 +35,12 @@ export interface WebhookResponse {
  * Uses the specified webhook URL from the requirements
  */
 export async function callN8nWebhook(payload: WebhookPayload): Promise<N8nResponse | null> {
-  const webhookUrl = 'https://n8n.mediajade.com/webhook/ai-task-agent';
+  const N8N_WEBHOOK_BASE = 'https://n8n.mediajade.com/webhook';
 
   try {
     console.log('[n8n] Calling webhook for task:', payload.task);
 
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(`${N8N_WEBHOOK_BASE}/ai-task-agent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,22 +73,83 @@ export async function generateIntentPreview(
   intentType: string
 ): Promise<string | null> {
   try {
-    const response = await callN8nWebhook({
-      task: intent,
-      user_id: userId,
-      intent_type: intentType,
-      preview_mode: true,
+    console.log('[N8N] Generating preview for intent:', intent, 'type:', intentType);
+    
+    const response = await fetch(`${N8N_WEBHOOK_BASE}/ai-preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        intent,
+        intentType,
+        timestamp: new Date().toISOString()
+      }),
     });
 
-    if (response && response.final_message) {
-      return response.final_message;
+    if (!response.ok) {
+      console.error('[N8N] Preview generation failed:', response.status, response.statusText);
+      return null;
     }
-  } catch (error) {
-    console.warn('[n8n] Webhook failed, using mock preview:', error);
-  }
 
-  // Fallback mock preview
-  return generateMockPreview(intent, intentType);
+    const result = await response.json();
+    console.log('[N8N] Preview generated successfully:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('[N8N] Error generating preview:', error);
+    return null;
+  }
+}
+
+/**
+ * Execute an intent using n8n (with fallback mock implementation)
+ */
+export async function executeIntent(
+  userId: string,
+  intent: string,
+  intentType: 'email' | 'task' | 'message' | 'documentation'
+): Promise<{ success: boolean; executionId?: string; error?: string }> {
+  try {
+    console.log('[N8N] Executing intent:', intent, 'type:', intentType);
+    
+    const response = await fetch(`${N8N_WEBHOOK_BASE}/ai-execute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        intent,
+        intentType,
+        timestamp: new Date().toISOString()
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[N8N] Intent execution failed:', response.status, response.statusText);
+      return {
+        success: false,
+        error: `Execution failed: ${response.statusText}`
+      };
+    }
+
+    const result = await response.json();
+    console.log('[N8N] Intent executed successfully:', result);
+    
+    return {
+      success: true,
+      executionId: result.executionId,
+      result: result.result
+    };
+  } catch (error) {
+    console.error('[N8N] Error executing intent:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 /**

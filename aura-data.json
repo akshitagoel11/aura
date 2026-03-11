@@ -1,0 +1,12 @@
+{
+  "users": [],
+  "sessions": [],
+  "tasks": [],
+  "aiActions": [],
+  "cognitiveLoad": [],
+  "nextUserId": 1,
+  "nextSessionId": 1,
+  "nextTaskId": 1,
+  "nextAIActionId": 1,
+  "nextCognitiveLoadId": 1
+}

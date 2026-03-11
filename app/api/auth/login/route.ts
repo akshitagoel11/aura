@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserWithPassword, createSession, verifyPassword, logActivity } from '@/lib/auth-db';
+import { userService, sessionService } from '@/lib/services-sqlite';
+import { verifyPassword } from '@/lib/database-sqlite';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[API] Login request received');
+    
     const body = await request.json();
     const { email, password } = body;
-
-    console.log('[v0] Login attempt with email:', email);
+    
+    console.log('[API] Login attempt for email:', email);
 
     // Validate input
     if (!email || !password) {
-      console.log('[v0] Missing email or password');
+      console.log('[API] Missing email or password');
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -18,68 +23,77 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user with password hash
-    console.log('[v0] Looking up user:', email);
-    const user = await getUserWithPassword(email);
+    console.log('[API] Authenticating user');
+    const user = await userService.getUserByEmail(email);
     
     if (!user) {
-      console.log('[v0] User not found:', email);
+      console.log('[API] User not found:', email);
       return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
+        { error: 'No account found with this email. Please register first.', code: 'USER_NOT_FOUND' },
+        { status: 404 }
       );
     }
-    
-    console.log('[v0] User found, verifying password');
 
     // Verify password
-    const isValidPassword = await verifyPassword(password, user.passwordHash);
-    console.log('[v0] Password valid:', isValidPassword);
+    console.log('[API] Password verification attempt');
+    console.log('[API] User data:', { 
+      userId: user.id, 
+      hasPasswordHash: !!user.passwordHash, 
+      hasSalt: !!user.salt,
+      passwordHashLength: user.passwordHash?.length,
+      saltLength: user.salt?.length
+    });
+    
+    const isValidPassword = verifyPassword(password, user.passwordHash, user.salt);
+    console.log('[API] Password verification result:', isValidPassword);
     
     if (!isValidPassword) {
-      console.log('[v0] Invalid password for:', email);
+      console.log('[API] Invalid password for user:', email);
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Incorrect password. Try again or reset your password.', code: 'INVALID_PASSWORD' },
         { status: 401 }
       );
     }
 
-    // Create session token
-    console.log('[v0] Creating session for user:', user.id);
-    const sessionToken = await createSession(user.id);
-    console.log('[v0] Session token created');
+    // Create session
+    console.log('[API] Creating session for user:', user.id);
+    const session = await sessionService.createSession(user.id);
+    
+    if (!session) {
+      console.log('[API] Failed to create session');
+      return NextResponse.json(
+        { error: 'Failed to create session' },
+        { status: 500 }
+      );
+    }
 
-    // Log login activity
-    await logActivity(user.id, 'login', {
-      email: user.email,
-      timestamp: new Date().toISOString(),
+    console.log('[API] Login successful for user:', user.id);
+    
+    // Set session cookie
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
+      session: {
+        id: session.id,
+        expiresAt: session.expiresAt,
+      }
     });
 
-    // Create response with session cookie
-    const response = NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-        },
-      },
-      { status: 200 }
-    );
-
-    // Set secure session cookie
-    response.cookies.set('session_token', sessionToken, {
+    response.cookies.set('session_token', session.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
+      maxAge: 24 * 60 * 60, // 24 hours
     });
 
     return response;
   } catch (error) {
-    console.error('[v0] Login error:', error);
+    console.error('[API] Login error:', error);
     return NextResponse.json(
-      { error: 'Failed to login' },
+      { error: 'Login failed' },
       { status: 500 }
     );
   }

@@ -64,9 +64,10 @@ export async function createUser(
   password: string,
   fullName?: string
 ): Promise<User> {
-  console.log('[Auth] Creating user, current users count:', users.length);
+  const storage = getStorage();
+  console.log('[Auth] Creating user, current users count:', storage.users.length);
   
-  const existingUser = users.find(u => u.email === email);
+  const existingUser = storage.users.find((u: User) => u.email === email);
   if (existingUser) {
     console.log('[Auth] User already exists:', email);
     // Return null instead of throwing - let the API handle the error response
@@ -75,36 +76,39 @@ export async function createUser(
 
   const passwordHash = await hashPassword(password);
   const user: User = {
-    id: nextUserId++,
+    id: storage.nextUserId++,
     email,
     fullName: fullName || null,
     passwordHash,
     createdAt: new Date().toISOString(),
   };
 
-  users.push(user);
-  console.log('[Auth] User created successfully. Total users:', users.length);
-  console.log('[Auth] All users:', users.map(u => ({ id: u.id, email: u.email, hasPassword: !!u.passwordHash })));
+  storage.users.push(user);
+  console.log('[Auth] User created successfully. Total users:', storage.users.length);
+  console.log('[Auth] All users:', storage.users.map((u: User) => ({ id: u.id, email: u.email, hasPassword: !!u.passwordHash })));
   
   return user;
 }
 
 // Get user by email
 export async function getUserByEmail(email: string): Promise<User | null> {
-  return users.find(u => u.email === email) || null;
+  const storage = getStorage();
+  return storage.users.find((u: User) => u.email === email) || null;
 }
 
 // Get user by ID
 export async function getUserById(userId: number): Promise<User | null> {
-  return users.find(u => u.id === userId) || null;
+  const storage = getStorage();
+  return storage.users.find((u: User) => u.id === userId) || null;
 }
 
 // Get user with password hash for login (simplified)
 export async function getUserWithPassword(email: string): Promise<(User & { passwordHash: string }) | null> {
+  const storage = getStorage();
   console.log('[Auth] Looking for user:', email);
-  console.log('[Auth] Current users:', users.map(u => ({ id: u.id, email: u.email, hasPassword: !!u.passwordHash })));
+  console.log('[Auth] Current users:', storage.users.map((u: User) => ({ id: u.id, email: u.email, hasPassword: !!u.passwordHash })));
   
-  const user = users.find(u => u.email === email);
+  const user = storage.users.find((u: User) => u.email === email);
   if (!user) {
     console.log('[Auth] User not found in storage');
     return null;
@@ -116,20 +120,22 @@ export async function getUserWithPassword(email: string): Promise<(User & { pass
 
 // Create session token
 export async function createSession(userId: number): Promise<string> {
-  const user = users.find(u => u.id === userId);
+  const storage = getStorage();
+  const user = storage.users.find((u: User) => u.id === userId);
   if (!user) throw new Error('User not found');
   
-  const token = `session_${nextSessionId++}_${Date.now()}`;
-  sessions[token] = { userId, user };
+  const token = `session_${storage.nextSessionId++}_${Date.now()}`;
+  storage.sessions[token] = { userId, user };
   
   return token;
 }
 
 // Get session
 export async function getSession(token: string): Promise<Session | null> {
+  const storage = getStorage();
   console.log('[Auth] Getting session for token:', token);
-  console.log('[Auth] Available sessions:', Object.keys(sessions));
-  const session = sessions[token] || null;
+  console.log('[Auth] Available sessions:', Object.keys(storage.sessions));
+  const session = storage.sessions[token] || null;
   console.log('[Auth] Session found:', session ? 'Yes' : 'No');
   if (session) {
     console.log('[Auth] Session user:', { userId: session.userId, userEmail: session.user.email });
@@ -139,7 +145,8 @@ export async function getSession(token: string): Promise<Session | null> {
 
 // Delete session
 export async function deleteSession(token: string): Promise<void> {
-  delete sessions[token];
+  const storage = getStorage();
+  delete storage.sessions[token];
 }
 
 // Log activity (integrated with activity API)
@@ -149,13 +156,19 @@ export async function logActivity(
   details?: Record<string, any>,
   intentExecutionId?: number
 ): Promise<void> {
-  // Import the addActivity function from the activity API
-  const { addActivity } = await import('../app/api/activity/route');
+  // Import the aiActionService to log activities
+  const { aiActionService } = await import('./services-sqlite');
   
   const status = action === 'executed_intent' && details?.success ? 'executed' : 
                 action === 'executed_intent' && !details?.success ? 'failed' : 'pending';
   
-  addActivity(userId, action, details, status, details?.intentType);
+  await aiActionService.logAIAction(userId, {
+    intentText: action,
+    intentType: details?.intentType || 'activity',
+    previewData: details,
+    status: status as any,
+    reasoning: `Activity logged: ${action}`
+  });
   
   console.log(`[Activity] User ${userId}: ${action}`, details);
 }

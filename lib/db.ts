@@ -1,4 +1,5 @@
 import { Pool, QueryResult } from 'pg';
+import type { PoolClient } from 'pg';
 
 if (!process.env.DATABASE_URL) {
   console.error('[v0] DATABASE_URL environment variable is not set');
@@ -8,7 +9,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('[v0] Unexpected error on idle client', err);
 });
 
@@ -26,7 +27,7 @@ export async function query(text: string, params?: (string | number | boolean | 
   }
 }
 
-export async function executeTransaction(callback: (client: any) => Promise<any>) {
+export async function executeTransaction(callback: (client: PoolClient) => Promise<any>) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

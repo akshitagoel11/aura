@@ -131,6 +131,8 @@ export default function RemindersPage() {
         </div>
       </div>
     );
+  }
+  
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar />
