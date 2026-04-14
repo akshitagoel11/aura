@@ -14,7 +14,13 @@ const createTaskSchema = z.object({
   description: z.string().optional(),
   priority: z.string().optional(),
   dueDate: flexibleDateString.optional().nullable(),
+  category: z.string().optional(),
+  estimatedDuration: z.union([z.string(), z.number()]).optional(),
+  assigneeEmail: z.string().optional(),
   syncToGoogle: z.boolean().optional(),
+  syncToGoogleTasks: z.boolean().optional(),
+  syncToGoogleCalendar: z.boolean().optional(),
+  sendEmailNotification: z.boolean().optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -46,7 +52,8 @@ export async function POST(request: NextRequest) {
     const task = await TaskService.createTask({
       userId: session.user.id,
       ...validated,
-      accessToken: validated.syncToGoogle ? accessToken : undefined
+      accessToken: (validated.syncToGoogle || validated.syncToGoogleTasks || validated.syncToGoogleCalendar || validated.sendEmailNotification) ? accessToken : undefined,
+      estimatedDuration: typeof validated.estimatedDuration === "string" ? parseInt(validated.estimatedDuration) : validated.estimatedDuration,
     })
 
     return NextResponse.json(task, { status: 201 })

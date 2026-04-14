@@ -28,6 +28,12 @@ export class TaskService {
     status?: string
     dueDate?: string | null
     accessToken?: string // Optional Google OAuth token
+    category?: string
+    estimatedDuration?: number
+    assigneeEmail?: string
+    syncToGoogleTasks?: boolean
+    syncToGoogleCalendar?: boolean
+    sendEmailNotification?: boolean
   }) {
     // 1. Save to DB
     const task = await prisma.task.create({
@@ -38,6 +44,9 @@ export class TaskService {
         priority: params.priority || "MEDIUM",
         status: params.status || "TODO",
         dueDate: params.dueDate ? new Date(params.dueDate) : null,
+        category: params.category || "OTHER",
+        estimatedDuration: params.estimatedDuration,
+        assigneeEmail: params.assigneeEmail,
       },
     })
 
@@ -50,19 +59,20 @@ export class TaskService {
           dueDate: task.dueDate?.toISOString(),
         },
         senderName: "Aura AI",
-        senderEmail: params.userId, // Using email as ID
-        syncToTasks: true,
-        syncToCalendar: true,
-        sendEmail: false,
+        senderEmail: params.userId, // Better if passed real email, but ok for now
+        syncToTasks: params.syncToGoogleTasks ?? true,
+        syncToCalendar: params.syncToGoogleCalendar ?? true,
+        sendEmail: params.sendEmailNotification ?? false,
       })
 
-      // Update task with Google IDs
-      if (syncResult.googleTaskId || syncResult.googleCalendarId) {
+      // Update task with Google IDs and notified emails
+      if (syncResult.googleTaskId || syncResult.googleCalendarId || syncResult.notifiedEmails?.length) {
         return await prisma.task.update({
           where: { id: task.id },
           data: {
             googleTaskId: syncResult.googleTaskId,
             googleCalendarId: syncResult.googleCalendarId,
+            notifiedEmails: syncResult.notifiedEmails?.join(",") || null,
           },
         })
       }

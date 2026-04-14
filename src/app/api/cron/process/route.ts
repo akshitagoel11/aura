@@ -43,17 +43,40 @@ export async function GET(request: NextRequest) {
     })
 
     const results = []
+    let emailsProcessed = 0
+
     for (const user of usersWithScheduled as any[]) {
-      const accessToken = user.accounts[0]?.access_token
-      if (accessToken) {
-        const processed = await EmailService.processScheduledEmails(accessToken)
-        results.push(...processed)
+      try {
+        const accessToken = user.accounts[0]?.access_token
+        if (accessToken) {
+          const processed = await EmailService.processScheduledEmails(accessToken)
+          emailsProcessed += processed.length
+        }
+      } catch (err) {
+        console.error(`Failed to process emails for user ${user.id}:`, err)
       }
+    }
+
+    // 4. Update missed reminders globally
+    const now = new Date()
+    let remindersProcessed = 0
+    try {
+      const updatedReminders = await (prisma as any).reminder.updateMany({
+        where: {
+          status: "UPCOMING",
+          scheduledAt: { lt: now }
+        },
+        data: { status: "MISSED" }
+      })
+      remindersProcessed = updatedReminders.count
+    } catch (err) {
+      console.error("Failed to update missed reminders:", err)
     }
 
     return NextResponse.json({ 
       success: true, 
-      processedCount: results.length 
+      emailsProcessed,
+      remindersProcessed
     })
   } catch (error) {
     console.error("Cron failed:", error)

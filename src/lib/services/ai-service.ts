@@ -175,6 +175,8 @@ Available intents:
 - LOG_ACTIVITY: Log an activity
 - QUERY_TASKS: Query or search tasks
 - QUERY_ANALYTICS: Ask about productivity metrics
+- SEND_EMAIL: Send an email to someone
+- CREATE_REMINDER: Create a simple reminder
 - GENERAL_CHAT: General conversation
 
 For each intent, extract relevant parameters and suggest actions.
@@ -190,7 +192,11 @@ Respond ONLY with a JSON object in this format:
     "priority": "LOW|MEDIUM|HIGH|URGENT",
     "dueDate": "ISO date string or relative time",
     "duration": "estimated duration in minutes",
-    "taskId": "task identifier if updating/deleting"
+    "taskId": "task identifier if updating/deleting",
+    "to": "recipient email address for SEND_EMAIL",
+    "subject": "email subject",
+    "body": "email body content",
+    "scheduledAt": "natural language schedule time for CREATE_REMINDER or SEND_EMAIL"
   },
   "actions": [
     {
@@ -298,6 +304,22 @@ Respond ONLY with a JSON object in this format:
           {
             type: "START_BREAK",
             description: "Start break",
+            data: intent.parameters,
+          },
+        ]
+      case "SEND_EMAIL":
+        return [
+          {
+            type: "SEND_EMAIL",
+            description: `Send email to ${intent.parameters.to || 'someone'}`,
+            data: intent.parameters,
+          },
+        ]
+      case "CREATE_REMINDER":
+        return [
+          {
+            type: "CREATE_REMINDER",
+            description: `Set reminder: ${intent.parameters.title || 'Untitled'}`,
             data: intent.parameters,
           },
         ]

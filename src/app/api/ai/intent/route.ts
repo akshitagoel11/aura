@@ -4,6 +4,8 @@ import { z } from "zod"
 import { authOptions } from "@/lib/auth"
 import { aiService } from "@/lib/services/ai-service"
 import { prisma } from "@/lib/prisma"
+import { EmailService } from "@/lib/services/email-service"
+import { ReminderService } from "@/lib/services/reminder-service"
 
 const intentSchema = z.object({
   input: z.string().min(1, "Input is required"),
@@ -39,6 +41,32 @@ export async function POST(request: NextRequest) {
     }
 
     const intent = await aiService.parseIntent(validatedData.input, context)
+
+    // Execute server-side automations (emails and reminders)
+    try {
+      const accessToken = (session as any).accessToken
+      if (intent.intent === "SEND_EMAIL") {
+        await EmailService.sendEmail({
+          userId: session.user.id,
+          to: intent.parameters.to || "",
+          subject: intent.parameters.subject || "No Subject",
+          body: intent.parameters.body || "No Content",
+          scheduledAt: intent.parameters.scheduledAt,
+          accessToken
+        })
+      } else if (intent.intent === "CREATE_REMINDER") {
+        await ReminderService.createReminder({
+          userId: session.user.id,
+          title: intent.parameters.title || "Untitled Reminder",
+          description: intent.parameters.description,
+          scheduledAt: intent.parameters.scheduledAt || new Date(Date.now() + 3600000).toISOString(),
+          accessToken
+        })
+      }
+    } catch (execError) {
+      console.error("[IntentExecution] Failed to execute action:", execError)
+      // We don't fail the complete request so that the user still gets a conversational response
+    }
 
     await prisma.activity.create({
       data: {
