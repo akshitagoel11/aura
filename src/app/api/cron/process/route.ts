@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { EmailService } from "@/lib/services/email-service"
+import { ReminderService } from "@/lib/services/reminder-service"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
@@ -10,12 +11,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 2. Process Scheduled Emails
-    // Note: We need a valid Google Access Token for each user.
-    // In a production app, we would use a Refresh Token to get a fresh Access Token.
-    // For now, we'll process users who have active sessions or recent tokens.
-    
-    // 2. Fetch all unique user IDs who have pending scheduled emails
+    const results = {
+      emailsProcessed: 0,
+      remindersProcessed: 0,
+      tasksOverdueUpdated: 0,
+    }
+
+    // 2. Fetch users with scheduled emails
     const pendingEmails = await (prisma as any).email.findMany({
       where: {
         status: "SCHEDULED",
@@ -27,56 +29,52 @@ export async function GET(request: NextRequest) {
 
     const userIds = pendingEmails.map((e: any) => e.userId)
     
-    if (userIds.length === 0) {
-      return NextResponse.json({ success: true, processedCount: 0 })
-    }
-
-    // 3. Fetch those users with their Google accounts
-    const usersWithScheduled = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      include: {
-        accounts: {
-          where: { provider: "google" },
-          take: 1
+    if (userIds.length > 0) {
+      const usersWithScheduled = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        include: {
+          accounts: {
+            where: { provider: "google" },
+            take: 1
+          }
         }
-      }
-    })
+      })
 
-    const results = []
-    let emailsProcessed = 0
-
-    for (const user of usersWithScheduled as any[]) {
-      try {
+      // Process emails
+      for (const user of usersWithScheduled as any[]) {
         const accessToken = user.accounts[0]?.access_token
         if (accessToken) {
           const processed = await EmailService.processScheduledEmails(accessToken)
-          emailsProcessed += processed.length
+          results.emailsProcessed += processed.length
         }
-      } catch (err) {
-        console.error(`Failed to process emails for user ${user.id}:`, err)
       }
     }
 
-    // 4. Update missed reminders globally
-    const now = new Date()
-    let remindersProcessed = 0
-    try {
-      const updatedReminders = await (prisma as any).reminder.updateMany({
-        where: {
-          status: "UPCOMING",
-          scheduledAt: { lt: now }
-        },
-        data: { status: "MISSED" }
-      })
-      remindersProcessed = updatedReminders.count
-    } catch (err) {
-      console.error("Failed to update missed reminders:", err)
-    }
+    // 3. Process pending reminders globally
+    // We update missed reminders
+    const updatedReminders = await (prisma as any).reminder.updateMany({
+      where: {
+        status: "UPCOMING",
+        scheduledAt: { lt: new Date() },
+      },
+      data: { status: "MISSED" },
+    })
+    results.remindersProcessed = updatedReminders.count
+
+    // 4. Delayed tasks processing
+    // Update tasks that are past due and not completed
+    const overdueTasks = await prisma.task.updateMany({
+      where: {
+        status: { notIn: ["COMPLETED", "OVERDUE"] },
+        dueDate: { lt: new Date() }
+      },
+      data: { status: "OVERDUE" }
+    })
+    results.tasksOverdueUpdated = overdueTasks.count
 
     return NextResponse.json({ 
       success: true, 
-      emailsProcessed,
-      remindersProcessed
+      results
     })
   } catch (error) {
     console.error("Cron failed:", error)

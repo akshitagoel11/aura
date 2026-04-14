@@ -13,11 +13,10 @@ const createTaskSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().optional(),
   priority: z.string().optional(),
-  dueDate: flexibleDateString.optional().nullable(),
   category: z.string().optional(),
-  estimatedDuration: z.union([z.string(), z.number()]).optional(),
+  dueDate: flexibleDateString.optional().nullable(),
+  estimatedDuration: z.number().optional(),
   assigneeEmail: z.string().optional(),
-  syncToGoogle: z.boolean().optional(),
   syncToGoogleTasks: z.boolean().optional(),
   syncToGoogleCalendar: z.boolean().optional(),
   sendEmailNotification: z.boolean().optional(),
@@ -51,9 +50,17 @@ export async function POST(request: NextRequest) {
 
     const task = await TaskService.createTask({
       userId: session.user.id,
-      ...validated,
-      accessToken: (validated.syncToGoogle || validated.syncToGoogleTasks || validated.syncToGoogleCalendar || validated.sendEmailNotification) ? accessToken : undefined,
-      estimatedDuration: typeof validated.estimatedDuration === "string" ? parseInt(validated.estimatedDuration) : validated.estimatedDuration,
+      title: validated.title,
+      description: validated.description,
+      priority: validated.priority,
+      category: validated.category,
+      dueDate: validated.dueDate,
+      estimatedDuration: validated.estimatedDuration,
+      assigneeEmail: validated.assigneeEmail,
+      syncToGoogleTasks: validated.syncToGoogleTasks,
+      syncToGoogleCalendar: validated.syncToGoogleCalendar,
+      sendEmailNotification: validated.sendEmailNotification,
+      accessToken: accessToken,
     })
 
     return NextResponse.json(task, { status: 201 })

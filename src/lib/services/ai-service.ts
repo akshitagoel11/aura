@@ -176,7 +176,7 @@ Available intents:
 - QUERY_TASKS: Query or search tasks
 - QUERY_ANALYTICS: Ask about productivity metrics
 - SEND_EMAIL: Send an email to someone
-- CREATE_REMINDER: Create a simple reminder
+- CREATE_REMINDER: Create a reminder or calendar event
 - GENERAL_CHAT: General conversation
 
 For each intent, extract relevant parameters and suggest actions.
@@ -186,17 +186,17 @@ Respond ONLY with a JSON object in this format:
   "intent": "INTENT_NAME",
   "confidence": 0.0-1.0,
   "parameters": {
-    "title": "task title",
-    "description": "task description",
+    "title": "task title or reminder title",
+    "description": "task description or reminder details",
     "category": "WORK|PERSONAL|LEARNING|HEALTH|FINANCE|MEETING|CREATIVE|OTHER",
     "priority": "LOW|MEDIUM|HIGH|URGENT",
     "dueDate": "ISO date string or relative time",
+    "scheduledAt": "ISO date for reminder/email",
     "duration": "estimated duration in minutes",
     "taskId": "task identifier if updating/deleting",
-    "to": "recipient email address for SEND_EMAIL",
+    "to": "email address of recipient",
     "subject": "email subject",
-    "body": "email body content",
-    "scheduledAt": "natural language schedule time for CREATE_REMINDER or SEND_EMAIL"
+    "body": "email body/content"
   },
   "actions": [
     {
@@ -267,6 +267,22 @@ Respond ONLY with a JSON object in this format:
             data: intent.parameters,
           },
         ]
+      case "SEND_EMAIL":
+        return [
+          {
+            type: "SEND_EMAIL",
+            description: `Send email to: ${intent.parameters.to || "someone"}`,
+            data: intent.parameters,
+          },
+        ]
+      case "CREATE_REMINDER":
+        return [
+          {
+            type: "CREATE_REMINDER",
+            description: `Create reminder: ${intent.parameters.title || input}`,
+            data: intent.parameters,
+          },
+        ]
       case "UPDATE_TASK":
         return [
           {
@@ -304,22 +320,6 @@ Respond ONLY with a JSON object in this format:
           {
             type: "START_BREAK",
             description: "Start break",
-            data: intent.parameters,
-          },
-        ]
-      case "SEND_EMAIL":
-        return [
-          {
-            type: "SEND_EMAIL",
-            description: `Send email to ${intent.parameters.to || 'someone'}`,
-            data: intent.parameters,
-          },
-        ]
-      case "CREATE_REMINDER":
-        return [
-          {
-            type: "CREATE_REMINDER",
-            description: `Set reminder: ${intent.parameters.title || 'Untitled'}`,
             data: intent.parameters,
           },
         ]

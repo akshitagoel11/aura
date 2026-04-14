@@ -42,30 +42,29 @@ export async function POST(request: NextRequest) {
 
     const intent = await aiService.parseIntent(validatedData.input, context)
 
-    // Execute server-side automations (emails and reminders)
+    // Execute server-side actions without UI interaction
     try {
       const accessToken = (session as any).accessToken
       if (intent.intent === "SEND_EMAIL") {
-        await EmailService.sendEmail({
-          userId: session.user.id,
-          to: intent.parameters.to || "",
-          subject: intent.parameters.subject || "No Subject",
-          body: intent.parameters.body || "No Content",
-          scheduledAt: intent.parameters.scheduledAt,
-          accessToken
-        })
+         await EmailService.sendEmail({
+           userId: session.user.id,
+           to: intent.parameters.to || "",
+           subject: intent.parameters.subject || "Automated Email from Aura",
+           body: intent.parameters.body || "This is an automated message.",
+           scheduledAt: intent.parameters.scheduledAt,
+           accessToken: accessToken
+         })
       } else if (intent.intent === "CREATE_REMINDER") {
-        await ReminderService.createReminder({
-          userId: session.user.id,
-          title: intent.parameters.title || "Untitled Reminder",
-          description: intent.parameters.description,
-          scheduledAt: intent.parameters.scheduledAt || new Date(Date.now() + 3600000).toISOString(),
-          accessToken
-        })
+         await ReminderService.createReminder({
+           userId: session.user.id,
+           title: intent.parameters.title || intent.parameters.message || "Aura AI Reminder",
+           description: intent.parameters.description,
+           scheduledAt: intent.parameters.scheduledAt || new Date(Date.now() + 3600000).toISOString(),
+           accessToken: accessToken
+         })
       }
-    } catch (execError) {
-      console.error("[IntentExecution] Failed to execute action:", execError)
-      // We don't fail the complete request so that the user still gets a conversational response
+    } catch (ActionError) {
+      console.error("Failed to execute AI side-effect:", ActionError)
     }
 
     await prisma.activity.create({

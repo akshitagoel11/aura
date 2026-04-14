@@ -26,14 +26,14 @@ export class TaskService {
     description?: string
     priority?: string
     status?: string
-    dueDate?: string | null
-    accessToken?: string // Optional Google OAuth token
     category?: string
     estimatedDuration?: number
     assigneeEmail?: string
     syncToGoogleTasks?: boolean
     syncToGoogleCalendar?: boolean
     sendEmailNotification?: boolean
+    dueDate?: string | null
+    accessToken?: string // Optional Google OAuth token
   }) {
     // 1. Save to DB
     const task = await prisma.task.create({
@@ -43,10 +43,10 @@ export class TaskService {
         description: params.description,
         priority: params.priority || "MEDIUM",
         status: params.status || "TODO",
-        dueDate: params.dueDate ? new Date(params.dueDate) : null,
         category: params.category || "OTHER",
         estimatedDuration: params.estimatedDuration,
         assigneeEmail: params.assigneeEmail,
+        dueDate: params.dueDate ? new Date(params.dueDate) : null,
       },
     })
 
@@ -59,20 +59,19 @@ export class TaskService {
           dueDate: task.dueDate?.toISOString(),
         },
         senderName: "Aura AI",
-        senderEmail: params.userId, // Better if passed real email, but ok for now
-        syncToTasks: params.syncToGoogleTasks ?? true,
-        syncToCalendar: params.syncToGoogleCalendar ?? true,
-        sendEmail: params.sendEmailNotification ?? false,
+        senderEmail: params.userId, // fallback to userId later
+        syncToTasks: params.syncToGoogleTasks !== false,
+        syncToCalendar: params.syncToGoogleCalendar !== false,
+        sendEmail: params.sendEmailNotification === true,
       })
 
-      // Update task with Google IDs and notified emails
-      if (syncResult.googleTaskId || syncResult.googleCalendarId || syncResult.notifiedEmails?.length) {
+      // Update task with Google IDs
+      if (syncResult.googleTaskId || syncResult.googleCalendarId) {
         return await prisma.task.update({
           where: { id: task.id },
           data: {
             googleTaskId: syncResult.googleTaskId,
             googleCalendarId: syncResult.googleCalendarId,
-            notifiedEmails: syncResult.notifiedEmails?.join(",") || null,
           },
         })
       }
