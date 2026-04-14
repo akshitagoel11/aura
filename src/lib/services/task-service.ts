@@ -26,7 +26,7 @@ export class TaskService {
     description?: string
     priority?: string
     status?: string
-    dueDate?: string
+    dueDate?: string | null
     accessToken?: string // Optional Google OAuth token
   }) {
     // 1. Save to DB
