@@ -20,8 +20,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -38,22 +37,21 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String?
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
+  email         String          @unique
+  emailVerified DateTime?       @map("email_verified")
   image         String?
   password      String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  accounts     Account[]
-  sessions     Session[]
-  tasks        Task[]
-  activities   Activity[]
-  schedules    Schedule[]
-  analytics    Analytics[]
-  preferences  UserPreference?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  accounts      Account[]
+  activities    Activity[]
+  analytics     Analytics[]
+  schedules     Schedule[]
+  sessions      Session[]
+  tasks         Task[]
+  preferences   UserPreference?
 
   @@map("users")
 }
@@ -68,27 +66,26 @@ model VerificationToken {
 }
 
 model Task {
-  id          String     @id @default(cuid())
-  userId      String     @map("user_id")
-  title       String
-  description String?
-  category    String     @default("OTHER")
-  priority    String     @default("MEDIUM")
-  status      String     @default("TODO")
-  dueDate     DateTime?  @map("due_date")
-  estimatedDuration Int? @map("estimated_duration")
-  actualDuration    Int? @map("actual_duration")
-  aiGenerated      Boolean  @default(false) @map("ai_generated")
-  googleTaskId     String?  @map("google_task_id")
-  googleCalendarId String?  @map("google_calendar_id")
-  notifiedEmails   String?  @map("notified_emails")
-  assigneeEmail    String?  @map("assignee_email")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  completedAt DateTime?  @map("completed_at")
-
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scheduleEntries ScheduleEntry[]
+  id                String          @id @default(cuid())
+  userId            String          @map("user_id")
+  title             String
+  description       String?
+  category          String          @default("OTHER")
+  priority          String          @default("MEDIUM")
+  status            String          @default("TODO")
+  dueDate           DateTime?       @map("due_date")
+  estimatedDuration Int?            @map("estimated_duration")
+  actualDuration    Int?            @map("actual_duration")
+  aiGenerated       Boolean         @default(false) @map("ai_generated")
+  googleTaskId      String?         @map("google_task_id")
+  googleCalendarId  String?         @map("google_calendar_id")
+  notifiedEmails    String?         @map("notified_emails")
+  assigneeEmail     String?         @map("assignee_email")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  completedAt       DateTime?       @map("completed_at")
+  scheduleEntries   ScheduleEntry[]
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([userId, dueDate])
@@ -96,18 +93,17 @@ model Task {
 }
 
 model Activity {
-  id        String       @id @default(cuid())
-  userId    String       @map("user_id")
-  type      String
-  title     String
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  type        String
+  title       String
   description String?
-  metadata  String?
-  startedAt DateTime     @map("started_at")
-  endedAt   DateTime?    @map("ended_at")
-  duration  Int?
-  createdAt DateTime     @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata    String?
+  startedAt   DateTime  @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  duration    Int?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, startedAt])
   @@index([userId, type])
@@ -115,18 +111,17 @@ model Activity {
 }
 
 model Schedule {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
+  id          String          @id @default(cuid())
+  userId      String          @map("user_id")
   date        DateTime
   title       String
   description String?
-  status      String   @default("ACTIVE")
-  aiGenerated Boolean  @default(false) @map("ai_generated")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries ScheduleEntry[]
+  status      String          @default("ACTIVE")
+  aiGenerated Boolean         @default(false) @map("ai_generated")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  entries     ScheduleEntry[]
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -143,29 +138,27 @@ model ScheduleEntry {
   endTime     DateTime @map("end_time")
   type        String   @default("TASK")
   createdAt   DateTime @default(now()) @map("created_at")
-
-  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  task     Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  task        Task?    @relation(fields: [taskId], references: [id])
 
   @@index([scheduleId, startTime])
   @@map("schedule_entries")
 }
 
 model Analytics {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id")
-  date            DateTime
-  productivityScore Int    @map("productivity_score")
-  tasksCompleted  Int      @default(0) @map("tasks_completed")
-  tasksCreated    Int      @default(0) @map("tasks_created")
-  focusTime       Int      @default(0) @map("focus_time")
-  breakTime       Int      @default(0) @map("break_time")
-  meetingTime     Int      @default(0) @map("meeting_time")
-  categoryData    String?  @map("category_data")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  date              DateTime
+  productivityScore Int      @map("productivity_score")
+  tasksCompleted    Int      @default(0) @map("tasks_completed")
+  tasksCreated      Int      @default(0) @map("tasks_created")
+  focusTime         Int      @default(0) @map("focus_time")
+  breakTime         Int      @default(0) @map("break_time")
+  meetingTime       Int      @default(0) @map("meeting_time")
+  categoryData      String?  @map("category_data")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -184,11 +177,7 @@ model UserPreference {
   notifications     Boolean  @default(true)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
 }
-
-// SQLite doesn't support enums natively, so they are omitted here. 
-// The application logic should handle valid values for the string fields used in models.

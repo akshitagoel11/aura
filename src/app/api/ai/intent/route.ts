@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error parsing intent:", error)
     return NextResponse.json(
-      { error: "Failed to parse intent" },
+      { error: error instanceof Error ? error.message : "Failed to parse intent" },
       { status: 500 }
     )
   }

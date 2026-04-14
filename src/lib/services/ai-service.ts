@@ -8,48 +8,61 @@ export class AIService {
   private primaryProvider: "openai" | "gemini"
 
   constructor() {
-    this.primaryProvider = (process.env.AI_PROVIDER as "openai" | "gemini") || "openai"
-    console.log(`[AIService] Primary provider: ${this.primaryProvider}`)
+    // Find available providers
+    const hasOpenAI = !!process.env.OPENAI_API_KEY
+    const hasGemini = !!process.env.GOOGLE_GEMINI_API_KEY
 
-    if (process.env.OPENAI_API_KEY) {
-      console.log("[AIService] OpenAI key found")
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      })
+    // Set primary provider based on availability
+    if (process.env.AI_PROVIDER === "gemini" && hasGemini) {
+      this.primaryProvider = "gemini"
+    } else if (process.env.AI_PROVIDER === "openai" && hasOpenAI) {
+      this.primaryProvider = "openai"
+    } else {
+      // Auto-detect
+      this.primaryProvider = hasGemini ? "gemini" : "openai"
     }
 
-    if (process.env.GOOGLE_GEMINI_API_KEY) {
-      console.log("[AIService] Gemini key found")
-      this.gemini = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY)
+    console.log(`[AIService] Selected Provider: ${this.primaryProvider} (Gemini: ${hasGemini}, OpenAI: ${hasOpenAI})`)
+
+    if (hasOpenAI) {
+      this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    }
+
+    if (hasGemini) {
+      this.gemini = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!)
     }
   }
 
   async parseIntent(input: string, context?: Record<string, any>): Promise<AIIntent> {
-    console.log(`[AIService] Parsing intent for: "${input}" using ${this.primaryProvider}`)
+    const provider = this.primaryProvider
+    const hasOpenAI = !!this.openai
+    const hasGemini = !!this.gemini
+
     try {
-      if (this.primaryProvider === "openai" && this.openai) {
+      if (provider === "openai" && hasOpenAI) {
         return await this.parseWithOpenAI(input, context)
       } 
       
-      if (this.gemini) {
+      if (hasGemini) {
         return await this.parseWithGemini(input, context)
       } 
       
-      if (this.openai) {
+      if (hasOpenAI) {
         return await this.parseWithOpenAI(input, context)
       }
       
-      throw new Error("No AI provider available")
-    } catch (error) {
-      console.error("[AIService] Primary AI provider failed, trying fallback:", error)
+      throw new Error(`No AI providers configured. Please check GOOGLE_GEMINI_API_KEY or OPENAI_API_KEY in environment variables.`)
+    } catch (error: any) {
+      console.error(`[AIService] ${provider} failed, trying fallback:`, error.message)
 
-      if (this.primaryProvider === "openai" && this.gemini) {
-        return await this.parseWithGemini(input, context)
-      } else if (this.openai) {
-        return await this.parseWithOpenAI(input, context)
+      // Fallback logic
+      if (provider === "openai" && hasGemini) {
+        try { return await this.parseWithGemini(input, context) } catch (e) {}
+      } else if (hasOpenAI) {
+        try { return await this.parseWithOpenAI(input, context) } catch (e) {}
       }
 
-      console.warn("[AIService] All providers failed, using local parsing")
+      console.warn("[AIService] All AI providers failed, falling back to local heuristic parsing")
       return this.parseLocally(input)
     }
   }
