@@ -10,6 +10,7 @@ import { useParseIntent, useCreateTask } from "@/lib/hooks"
 import { useAIStore } from "@/lib/stores"
 import { AIAssistantMessage } from "@/types"
 import { formatTime } from "@/lib/utils"
+import { MountedOnly } from "@/components/ui/mounted-only"
 
 export function AIAssistant() {
   const [input, setInput] = useState("")
@@ -219,9 +220,11 @@ export function AIAssistant() {
                   </div>
                 )}
                 
-                <span className="text-[10px] text-slate-400 font-medium px-1">
-                  {formatTime(message.timestamp)}
-                </span>
+                <MountedOnly>
+                  <span className="text-[10px] text-slate-400 font-medium px-1">
+                    {formatTime(message.timestamp)}
+                  </span>
+                </MountedOnly>
               </div>
             </div>
           ))}

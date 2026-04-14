@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { ActivityType } from "@/types"
 import { getRelativeTime, formatDuration } from "@/lib/utils"
+import { MountedOnly } from "@/components/ui/mounted-only"
 
 interface Activity {
   id: string
@@ -37,19 +38,22 @@ interface ActivityTimelineProps {
   activities?: Activity[]
 }
 
+// Fixed dates for predictable SSR output
+const MOCK_NOW = new Date("2024-04-14T12:00:00Z").getTime()
+
 const mockActivities: Activity[] = [
   {
     id: "1",
     type: ActivityType.TASK,
     title: "Completed task: Review Q4 report",
-    startedAt: new Date(Date.now() - 1000 * 60 * 30),
+    startedAt: new Date(MOCK_NOW - 1000 * 60 * 30),
     duration: 45,
   },
   {
     id: "2",
     type: ActivityType.FOCUS,
     title: "Focus session",
-    startedAt: new Date(Date.now() - 1000 * 60 * 90),
+    startedAt: new Date(MOCK_NOW - 1000 * 60 * 90),
     duration: 60,
   },
   {
@@ -57,21 +61,21 @@ const mockActivities: Activity[] = [
     type: ActivityType.MEETING,
     title: "Team standup",
     description: "Daily team sync",
-    startedAt: new Date(Date.now() - 1000 * 60 * 150),
+    startedAt: new Date(MOCK_NOW - 1000 * 60 * 150),
     duration: 30,
   },
   {
     id: "4",
     type: ActivityType.BREAK,
     title: "Coffee break",
-    startedAt: new Date(Date.now() - 1000 * 60 * 200),
+    startedAt: new Date(MOCK_NOW - 1000 * 60 * 200),
     duration: 15,
   },
   {
     id: "5",
     type: ActivityType.LEARNING,
     title: "Read documentation",
-    startedAt: new Date(Date.now() - 1000 * 60 * 300),
+    startedAt: new Date(MOCK_NOW - 1000 * 60 * 300),
     duration: 30,
   },
 ]
@@ -184,9 +188,11 @@ export function ActivityTimeline({ activities = mockActivities }: ActivityTimeli
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {getRelativeTime(activity.startedAt)}
-                    </span>
+                    <MountedOnly>
+                      <span className="text-xs text-muted-foreground">
+                        {getRelativeTime(activity.startedAt)}
+                      </span>
+                    </MountedOnly>
                   </div>
                 </div>
               </div>

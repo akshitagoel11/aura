@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useTasks, useUpdateTask, useDeleteTask } from "@/lib/hooks"
 import { getPriorityColor, getCategoryColor, formatDate, isOverdue } from "@/lib/utils"
+import { MountedOnly } from "@/components/ui/mounted-only"
 
 interface TaskListProps {
   onCreateTask: () => void
@@ -159,16 +160,18 @@ export function TaskList({ onCreateTask }: TaskListProps) {
                   
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                     {task.dueDate && (
-                      <span
-                        className={`flex items-center gap-1 ${
-                          isOverdue(task.dueDate) && task.status !== "COMPLETED"
-                            ? "text-red-500"
-                            : ""
-                        }`}
-                      >
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(task.dueDate)}
-                      </span>
+                      <MountedOnly>
+                        <span
+                          className={`flex items-center gap-1 ${
+                            isOverdue(task.dueDate) && task.status !== "COMPLETED"
+                              ? "text-red-500"
+                              : ""
+                          }`}
+                        >
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(task.dueDate)}
+                        </span>
+                      </MountedOnly>
                     )}
                     {task.estimatedDuration && (
                       <span className="flex items-center gap-1">
