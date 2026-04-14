@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Calendar,
   Clock,
@@ -107,9 +107,15 @@ const getEntryColor = (type: string) => {
 }
 
 export function ScheduleView() {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [view, setView] = useState<"day" | "week">("day")
 
+  useEffect(() => {
+    setCurrentDate(new Date())
+  }, [])
+
+  if (!currentDate) return null // Prevent SSR mismatch
+  
   const navigateDate = (direction: "prev" | "next") => {
     const days = direction === "prev" ? -1 : 1
     setCurrentDate(addDays(currentDate, days))

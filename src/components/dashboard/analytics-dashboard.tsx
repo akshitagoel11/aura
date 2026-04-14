@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   BarChart,
   Bar,
@@ -32,11 +32,16 @@ const COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899"
 
 export function AnalyticsDashboard() {
   const [period, setPeriod] = useState("7d")
+  const [mounted, setMounted] = useState(false)
   const { data, isLoading } = useAnalytics(period)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const metrics = data?.metrics
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <Card className="h-full">
         <CardContent className="flex items-center justify-center h-64">
