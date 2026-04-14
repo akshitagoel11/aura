@@ -1,0 +1,7 @@
+export { Sidebar } from "./sidebar"
+export { TaskList } from "./task-list"
+export { AIAssistant } from "./ai-assistant"
+export { AnalyticsDashboard } from "./analytics-dashboard"
+export { ActivityTimeline } from "./activity-timeline"
+export { ScheduleView } from "./schedule-view"
+export { CreateTaskDialog } from "./create-task-dialog"
