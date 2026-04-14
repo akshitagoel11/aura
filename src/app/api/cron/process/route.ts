@@ -15,12 +15,25 @@ export async function GET(request: NextRequest) {
     // In a production app, we would use a Refresh Token to get a fresh Access Token.
     // For now, we'll process users who have active sessions or recent tokens.
     
-    const usersWithScheduled = await prisma.user.findMany({
+    // 2. Fetch all unique user IDs who have pending scheduled emails
+    const pendingEmails = await (prisma as any).email.findMany({
       where: {
-        emails: {
-          some: { status: "SCHEDULED", scheduledAt: { lte: new Date() } }
-        }
+        status: "SCHEDULED",
+        scheduledAt: { lte: new Date() }
       },
+      select: { userId: true },
+      distinct: ['userId']
+    })
+
+    const userIds = pendingEmails.map((e: any) => e.userId)
+    
+    if (userIds.length === 0) {
+      return NextResponse.json({ success: true, processedCount: 0 })
+    }
+
+    // 3. Fetch those users with their Google accounts
+    const usersWithScheduled = await prisma.user.findMany({
+      where: { id: { in: userIds } },
       include: {
         accounts: {
           where: { provider: "google" },
@@ -30,7 +43,7 @@ export async function GET(request: NextRequest) {
     })
 
     const results = []
-    for (const user of usersWithScheduled) {
+    for (const user of usersWithScheduled as any[]) {
       const accessToken = user.accounts[0]?.access_token
       if (accessToken) {
         const processed = await EmailService.processScheduledEmails(accessToken)

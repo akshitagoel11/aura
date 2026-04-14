@@ -17,7 +17,7 @@ export class ReminderService {
     if (!scheduledDate) throw new Error("Invalid date format")
 
     // 1. Save to DB
-    const reminder = await prisma.reminder.create({
+    const reminder = await (prisma as any).reminder.create({
       data: {
         userId: params.userId,
         title: params.title,
@@ -46,7 +46,7 @@ export class ReminderService {
     const now = new Date()
     
     // Auto-update missed reminders
-    await prisma.reminder.updateMany({
+    await (prisma as any).reminder.updateMany({
       where: {
         userId,
         status: "UPCOMING",
@@ -55,7 +55,7 @@ export class ReminderService {
       data: { status: "MISSED" },
     })
 
-    return await prisma.reminder.findMany({
+    return await (prisma as any).reminder.findMany({
       where: { userId },
       orderBy: { scheduledAt: "asc" },
     })
@@ -65,7 +65,7 @@ export class ReminderService {
    * Complete a reminder
    */
   static async completeReminder(reminderId: string, userId: string) {
-    return await prisma.reminder.update({
+    return await (prisma as any).reminder.update({
       where: { id: reminderId, userId },
       data: { status: "COMPLETED" },
     })

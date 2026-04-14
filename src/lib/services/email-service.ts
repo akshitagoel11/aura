@@ -17,7 +17,7 @@ export class EmailService {
     const scheduledDate = params.scheduledAt ? chrono.parseDate(params.scheduledAt) : null
 
     // 1. Log to Database
-    const emailRecord = await prisma.email.create({
+    const emailRecord = await (prisma as any).email.create({
       data: {
         userId: params.userId,
         to: params.to,
@@ -38,7 +38,7 @@ export class EmailService {
 
       if (!sent) {
         // Update status to failed or pending
-        await prisma.email.update({
+        await (prisma as any).email.update({
           where: { id: emailRecord.id },
           data: { status: "FAILED" },
         })
@@ -53,7 +53,7 @@ export class EmailService {
    * List emails for a user
    */
   static async listEmails(userId: string, status?: string) {
-    return await prisma.email.findMany({
+    return await (prisma as any).email.findMany({
       where: {
         userId,
         ...(status && status !== "ALL" ? { status } : {}),
@@ -67,7 +67,7 @@ export class EmailService {
    */
   static async processScheduledEmails(accessToken: string) {
     const now = new Date()
-    const pending = await prisma.email.findMany({
+    const pending = await (prisma as any).email.findMany({
       where: {
         status: "SCHEDULED",
         scheduledAt: { lte: now },
@@ -83,7 +83,7 @@ export class EmailService {
       })
 
       if (sent) {
-        const updated = await prisma.email.update({
+        const updated = await (prisma as any).email.update({
           where: { id: email.id },
           data: { status: "SENT" },
         })

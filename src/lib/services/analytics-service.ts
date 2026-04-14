@@ -14,8 +14,8 @@ export class AnalyticsService {
     const [tasksCompleted, tasksTotal, emailsSent, remindersCreated] = await Promise.all([
       prisma.task.count({ where: { userId, status: "COMPLETED", completedAt: { gte: todayStart, lte: todayEnd } } }),
       prisma.task.count({ where: { userId, createdAt: { gte: todayStart, lte: todayEnd } } }),
-      prisma.email.count({ where: { userId, status: "SENT", createdAt: { gte: todayStart, lte: todayEnd } } }),
-      prisma.reminder.count({ where: { userId, createdAt: { gte: todayStart, lte: todayEnd } } }),
+      (prisma as any).email.count({ where: { userId, status: "SENT", createdAt: { gte: todayStart, lte: todayEnd } } }),
+      (prisma as any).reminder.count({ where: { userId, createdAt: { gte: todayStart, lte: todayEnd } } }),
     ])
 
     // 2. Calculate Productivity Score

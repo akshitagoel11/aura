@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { TaskStatus, Priority } from "@prisma/client"
+import { TaskStatus, Priority } from "@/types"
 import { GoogleTasksService, syncTaskToGoogle } from "./google-services"
 
 export class TaskService {
