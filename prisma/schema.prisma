@@ -51,6 +51,8 @@ model User {
   schedules     Schedule[]
   sessions      Session[]
   tasks         Task[]
+  emails        Email[]
+  reminders     Reminder[]
   preferences   UserPreference?
 
   @@map("users")
@@ -180,4 +182,32 @@ model UserPreference {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
+}
+model Email {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  to          String
+  subject     String
+  body        String
+  status      String   @default("SENT") // SENT, SCHEDULED, DRAFT
+  scheduledAt DateTime? @map("scheduled_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("emails")
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  scheduledAt DateTime @map("scheduled_at")
+  status      String   @default("UPCOMING") // UPCOMING, COMPLETED, MISSED
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scheduledAt])
+  @@map("reminders")
 }
